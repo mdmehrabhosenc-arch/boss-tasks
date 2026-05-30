@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boss Tasks">
+<title>Boss Task Manager</title>
+<link rel="manifest" id="manifest-placeholder">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #07070d;
+    --surface: #10101a;
+    --surface2: #181826;
+    --border: #2a2a40;
+    --accent: #ff6b35;
+    --accent2: #ffb347;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #f0f0f8;
+    --muted: #7070a0;
+    --glow: rgba(255, 107, 53, 0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,107,53,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(100,80,255,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 120px; }
+
+  /* HEADER */
+  .header {
+    padding: 20px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, var(--bg) 80%, transparent);
+    padding-bottom: 12px;
+  }
+
+  .header-left h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .header-left h1 span { color: var(--accent); }
+  .header-left p { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .notif-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px;
+    transition: all 0.2s;
+  }
+  .notif-btn:active { transform: scale(0.92); }
+  .notif-btn.on { border-color: var(--accent); background: var(--glow); }
+
+  /* DATE STRIP */
+  .date-strip {
+    padding: 16px 20px 0;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .date-strip::-webkit-scrollbar { display: none; }
+
+  .date-chip {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    min-width: 52px;
+  }
+  .date-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 16px rgba(255,107,53,0.4);
+  }
+  .date-chip .day-num { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+  .date-chip .day-name { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .date-chip.active .day-name { color: rgba(255,255,255,0.7); }
+
+  /* STATS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 16px 20px 0;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-card .val {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .stat-card .lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stat-card.total .val { color: var(--text); }
+  .stat-card.done .val { color: var(--green); }
+  .stat-card.pending .val { color: var(--accent); }
+
+  /* SECTION */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 10px;
+  }
+  .section-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* TASK CARDS */
+  .task-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: all 0.3s;
+    animation: slideIn 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .task-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .task-card.active-now::before { opacity: 1; }
+  .task-card.done-task { opacity: 0.5; }
+  .task-card.done-task::before { background: var(--green); opacity: 0.5; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .task-check {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    background: transparent;
+    font-size: 14px;
+    color: transparent;
+    margin-top: 1px;
+  }
+  .task-check.checked {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .done-task .task-name { text-decoration: line-through; color: var(--muted); }
+
+  .task-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .time-badge {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 8px;
+    color: var(--accent2);
+  }
+  .time-badge svg { width: 11px; height: 11px; }
+
+  .alarm-badge {
+    font-size: 11px;
+    background: rgba(255,107,53,0.12);
+    border: 1px solid rgba(255,107,53,0.25);
+    border-radius: 8px;
+    padding: 3px 8px;
+    color: var(--accent);
+  }
+
+  .priority-badge {
+    font-size: 11px;
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .priority-badge.high { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+  .priority-badge.medium { background: rgba(255,179,71,0.12); color: var(--accent2); border: 1px solid rgba(255,179,71,0.25); }
+  .priority-badge.low { background: rgba(100,100,150,0.12); color: var(--muted); border: 1px solid var(--border); }
+
+  .task-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+  }
+  .icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .icon-btn:active { transform: scale(0.88); }
+  .icon-btn.del:active { background: rgba(239,68,68,0.2); color: var(--red); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    width: 60px; height: 60px;
+    border-radius: 20px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.5);
+    transition: all 0.2s;
+    z-index: 200;
+  }
+  .fab:active { transform: scale(0.9); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 300;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+
+  input[type=text], input[type=time], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow);
+  }
+  select option { background: var(--surface2); }
+
+  .time-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .alarm-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .alarm-opt {
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .alarm-opt.selected {
+    background: rgba(255,107,53,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .btn-cancel {
+    flex: 1;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-save {
+    flex: 2;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    box-shadow: 0 4px 16px rgba(255,107,53,0.35);
+    transition: all 0.2s;
+  }
+  .btn-save:active { transform: scale(0.97); }
+
+  /* ALARM TOAST */
+  .alarm-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-120px);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 18px;
+    padding: 16px 20px;
+    z-index: 500;
+    min-width: 300px;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,107,53,0.2);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    text-align: center;
+  }
+  .alarm-toast.show { transform: translateX(-50%) translateY(0); }
+  .alarm-toast .boss-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .alarm-toast .task-text { font-size: 13px; color: var(--muted); }
+  .alarm-toast .dismiss-btn {
+    margin-top: 10px;
+    padding: 7px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* INSTALL PROMPT */
+  .install-bar {
+    margin: 16px 20px 0;
+    background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(100,80,255,0.1));
+    border: 1px solid rgba(255,107,53,0.25);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .install-bar .info { flex: 1; }
+  .install-bar .info strong { font-family: 'Syne', sans-serif; font-size: 13px; display: block; }
+  .install-bar .info span { font-size: 12px; color: var(--muted); }
+  .install-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* PROGRESS BAR */
+  .progress-wrap { padding: 16px 20px 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s ease; }
+
+  /* CURRENT TIME */
+  .current-time {
+    text-align: center;
+    padding: 12px 20px 0;
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+  .current-date-text {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pulse {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <h1>Boss <span>Tasks</span></h1>
+      <p id="todayLabel">আজকের কাজ</p>
+    </div>
+    <button class="notif-btn" id="notifBtn" onclick="toggleNotifications()" title="Notifications">🔔</button>
+  </div>
+
+  <div class="current-time" id="clockDisplay">00:00</div>
+  <div class="current-date-text" id="dateDisplay"></div>
+
+  <div id="installBarWrap"></div>
+
+  <div class="date-strip" id="dateStrip"></div>
+
+  <div class="stats-row">
+    <div class="stat-card total"><div class="val" id="totalCount">0</div><div class="lbl">মোট</div></div>
+    <div class="stat-card done"><div class="val" id="doneCount">0</div><div class="lbl">শেষ</div></div>
+    <div class="stat-card pending"><div class="val" id="pendingCount">0</div><div class="lbl">বাকি</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>অগ্রগতি</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="section-header">
+    <h2>টাস্ক লিস্ট</h2>
+  </div>
+
+  <div class="task-list" id="taskList"></div>
+</div>
+
+<button class="fab" onclick="openModal()">＋</button>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="modalTitle">নতুন টাস্ক</h3>
+
+    <label>কাজের নাম *</label>
+    <input type="text" id="taskName" placeholder="যেমন: মিটিং প্রস্তুতি নাও">
+
+    <label>তারিখ</label>
+    <input type="text" id="taskDate" readonly>
+
+    <div class="time-row">
+      <div>
+        <label>শুরুর সময়</label>
+        <input type="time" id="taskTime">
+      </div>
+      <div>
+        <label>শেষের সময়</label>
+        <input type="time" id="taskTimeEnd">
+      </div>
+    </div>
+
+    <label>অ্যালার্ম (কত মিনিট আগে?)</label>
+    <div class="alarm-options">
+      <div class="alarm-opt" data-val="5" onclick="selectAlarm(this)">৫ মিনিট আগে</div>
+      <div class="alarm-opt" data-val="10" onclick="selectAlarm(this)">১০ মিনিট আগে</div>
+      <div class="alarm-opt" data-val="15" onclick="selectAlarm(this)">১৫ মিনিট আগে</div>
+      <div class="alarm-opt" data-val="30" onclick="selectAlarm(this)">৩০ মিনিট আগে</div>
+    </div>
+
+    <label>প্রায়রিটি</label>
+    <select id="taskPriority">
+      <option value="high">🔴 হাই</option>
+      <option value="medium" selected>🟡 মিডিয়াম</option>
+      <option value="low">⚪ লো</option>
+    </select>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">বাতিল</button>
+      <button class="btn-save" onclick="saveTask()">সেভ করো</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALARM TOAST -->
+<div class="alarm-toast" id="alarmToast">
+  <div class="boss-text">🔔 Boss, Ready হন!</div>
+  <div class="task-text" id="alarmTaskText"></div>
+  <button class="dismiss-btn" onclick="dismissAlarm()">ঠিক আছে</button>
+</div>
+
+<script>
+// ===== STATE =====
+let tasks = JSON.parse(localStorage.getItem('boss_tasks') || '[]');
+let selectedDate = todayStr();
+let selectedAlarm = null;
+let editingId = null;
+let notifGranted = false;
+let deferredPrompt = null;
+let alarmCheckInterval = null;
+
+// ===== HELPERS =====
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDate(str) {
+  const d = new Date(str + 'T00:00:00');
+  const days = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
+  const months = ['জানু','ফেব','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function saveData() {
+  localStorage.setItem('boss_tasks', JSON.stringify(tasks));
+}
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockDisplay').textContent = h + ':' + m;
+  document.getElementById('dateDisplay').textContent = formatDate(todayStr());
+}
+
+// ===== DATE STRIP =====
+function buildDateStrip() {
+  const strip = document.getElementById('dateStrip');
+  strip.innerHTML = '';
+  const dayNames = ['রবি','সোম','মঙ্গল','বুধ','বৃহস্প','শুক্র','শনি'];
+  for (let i = -1; i <= 6; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const str = d.toISOString().split('T')[0];
+    const chip = document.createElement('div');
+    chip.className = 'date-chip' + (str === selectedDate ? ' active' : '');
+    chip.innerHTML = `<div class="day-num">${d.getDate()}</div><div class="day-name">${dayNames[d.getDay()]}</div>`;
+    chip.onclick = () => { selectedDate = str; buildDateStrip(); renderTasks(); updateTaskDate(); };
+    strip.appendChild(chip);
+  }
+  document.getElementById('todayLabel').textContent = selectedDate === todayStr() ? 'আজকের কাজ' : formatDate(selectedDate);
+}
+
+function updateTaskDate() {
+  document.getElementById('taskDate').value = formatDate(selectedDate);
+}
+
+// ===== RENDER TASKS =====
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  const filtered = tasks.filter(t => t.date === selectedDate);
+  const now = new Date();
+
+  filtered.sort((a,b) => {
+    if (!a.time && !b.time) return 0;
+    if (!a.time) return 1;
+    if (!b.time) return -1;
+    return a.time.localeCompare(b.time);
+  });
+
+  // Stats
+  const total = filtered.length;
+  const done = filtered.filter(t => t.done).length;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('doneCount').textContent = done;
+  document.getElementById('pendingCount').textContent = total - done;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="emoji">📋</div>
+      <p>এই দিনের কোনো টাস্ক নেই।<br>${selectedDate === todayStr() ? 'নতুন টাস্ক যোগ করুন!' : 'সেলেক্ট করা তারিখে যোগ করুন!'}</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(task => {
+    const isActive = isCurrentlyActive(task, now);
+    const card = document.createElement('div');
+    card.className = 'task-card' + (task.done ? ' done-task' : '') + (isActive ? ' active-now' : '');
+    card.innerHTML = `
+      <div class="task-check ${task.done ? 'checked' : ''}" onclick="toggleDone('${task.id}')">
+        ${task.done ? '✓' : ''}
+      </div>
+      <div class="task-body">
+        <div class="task-name">${task.name}</div>
+        <div class="task-meta">
+          ${task.time ? `<div class="time-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            ${task.time}${task.timeEnd ? ' - '+task.timeEnd : ''}
+          </div>` : ''}
+          ${task.alarm ? `<div class="alarm-badge">🔔 ${task.alarm}মি আগে</div>` : ''}
+          <div class="priority-badge ${task.priority}">${task.priority === 'high' ? '🔴 হাই' : task.priority === 'medium' ? '🟡 মিড' : '⚪ লো'}</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <div class="icon-btn del" onclick="deleteTask('${task.id}')">🗑️</div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function isCurrentlyActive(task, now) {
+  if (!task.time || task.date !== todayStr()) return false;
+  const [h,m] = task.time.split(':').map(Number);
+  const taskStart = new Date(); taskStart.setHours(h,m,0,0);
+  if (task.timeEnd) {
+    const [eh,em] = task.timeEnd.split(':').map(Number);
+    const taskEnd = new Date(); taskEnd.setHours(eh,em,0,0);
+    return now >= taskStart && now <= taskEnd;
+  }
+  return Math.abs(now - taskStart) < 60*60*1000;
+}
+
+// ===== TASK CRUD =====
+function toggleDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.done = !t.done; saveData(); renderTasks(); }
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  saveData(); renderTasks();
+}
+
+function saveTask() {
+  const name = document.getElementById('taskName').value.trim();
+  if (!name) { document.getElementById('taskName').focus(); return; }
+
+  const task = {
+    id: editingId || genId(),
+    name,
+    date: selectedDate,
+    time: document.getElementById('taskTime').value,
+    timeEnd: document.getElementById('taskTimeEnd').value,
+    alarm: selectedAlarm,
+    priority: document.getElementById('taskPriority').value,
+    done: false,
+    alarmFired: {}
+  };
+
+  if (editingId) {
+    const idx = tasks.findIndex(t => t.id === editingId);
+    if (idx > -1) tasks[idx] = {...tasks[idx], ...task, done: tasks[idx].done};
+  } else {
+    tasks.push(task);
+  }
+
+  saveData(); renderTasks(); closeModal();
+}
+
+// ===== MODAL =====
+function openModal(id = null) {
+  editingId = id;
+  selectedAlarm = null;
+  document.querySelectorAll('.alarm-opt').forEach(el => el.classList.remove('selected'));
+
+  if (id) {
+    const t = tasks.find(t => t.id === id);
+    document.getElementById('modalTitle').textContent = 'টাস্ক এডিট';
+    document.getElementById('taskName').value = t.name;
+    document.getElementById('taskTime').value = t.time || '';
+    document.getElementById('taskTimeEnd').value = t.timeEnd || '';
+    document.getElementById('taskPriority').value = t.priority;
+    if (t.alarm) {
+      selectedAlarm = t.alarm;
+      document.querySelectorAll('.alarm-opt').forEach(el => {
+        if (parseInt(el.dataset.val) === t.alarm) el.classList.add('selected');
+      });
+    }
+  } else {
+    document.getElementById('modalTitle').textContent = 'নতুন টাস্ক';
+    document.getElementById('taskName').value = '';
+    document.getElementById('taskTime').value = '';
+    document.getElementById('taskTimeEnd').value = '';
+    document.getElementById('taskPriority').value = 'medium';
+  }
+
+  updateTaskDate();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('taskName').focus(), 400);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+
+function closeOnOverlay(e) {
+  if (e.target.id === 'modalOverlay') closeModal();
+}
+
+function selectAlarm(el) {
+  document.querySelectorAll('.alarm-opt').forEach(e => e.classList.remove('selected'));
+  if (selectedAlarm === parseInt(el.dataset.val)) {
+    selectedAlarm = null;
+  } else {
+    el.classList.add('selected');
+    selectedAlarm = parseInt(el.dataset.val);
+  }
+}
+
+// ===== NOTIFICATIONS =====
+async function toggleNotifications() {
+  if (!('Notification' in window)) {
+    alert('আপনার ব্রাউজার notification সাপোর্ট করে না।');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    alert('Notification ব্লক করা আছে। ব্রাউজার সেটিংস থেকে allow করুন।');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    const perm = await Notification.requestPermission();
+    notifGranted = perm === 'granted';
+  } else {
+    notifGranted = true;
+  }
+
+  const btn = document.getElementById('notifBtn');
+  if (notifGranted) {
+    btn.classList.add('on');
+    btn.textContent = '🔔';
+    localStorage.setItem('boss_notif', '1');
+    showToastAlert('✅ Notification চালু হয়েছে!', '');
+  } else {
+    btn.classList.remove('on');
+    localStorage.setItem('boss_notif', '0');
+  }
+}
+
+function checkNotifStatus() {
+  const saved = localStorage.getItem('boss_notif');
+  if (saved === '1' && Notification.permission === 'granted') {
+    notifGranted = true;
+    document.getElementById('notifBtn').classList.add('on');
+  }
+}
+
+// ===== ALARM CHECK =====
+function checkAlarms() {
+  const now = new Date();
+  const todayTasks = tasks.filter(t => t.date === todayStr() && !t.done && t.time && t.alarm);
+
+  todayTasks.forEach(task => {
+    const [h, m] = task.time.split(':').map(Number);
+    const taskTime = new Date(); taskTime.setHours(h, m, 0, 0);
+    const alarmTime = new Date(taskTime.getTime() - task.alarm * 60 * 1000);
+
+    const diff = Math.abs(now - alarmTime);
+    const key = `${task.id}_${task.alarm}`;
+
+    if (diff < 31000 && !task.alarmFired[key]) {
+      task.alarmFired[key] = true;
+      saveData();
+      fireAlarm(task);
+    }
+  });
+}
+
+function fireAlarm(task) {
+  const msg = `Boss, ready হন! "${task.name}" — ${task.time}-এ শুরু হবে।`;
+
+  // Show in-app toast
+  showToastAlert('🔔 Boss, Ready হন!', `"${task.name}" — ${task.time}-এ শুরু হবে`);
+
+  // Web Notification (shows even in DND on some Android)
+  if (notifGranted && Notification.permission === 'granted') {
+    try {
+      const n = new Notification('🔔 Boss, Ready হন!', {
+        body: `"${task.name}" — ${task.time}-এ শুরু হবে`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%23ff6b35"/><text y=".9em" font-size="80" x="10">📋</text></svg>',
+        tag: task.id,
+        requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 400]
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    } catch(e) {}
+  }
+
+  // Vibrate
+  if (navigator.vibrate) {
+    navigator.vibrate([300, 100, 300, 100, 500]);
+  }
+
+  // Sound beep
+  playBeep();
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 150, 300].forEach(delay => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + delay/1000);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay/1000 + 0.3);
+      osc.start(ctx.currentTime + delay/1000);
+      osc.stop(ctx.currentTime + delay/1000 + 0.35);
+    });
+  } catch(e) {}
+}
+
+// ===== TOAST =====
+let toastTimer = null;
+function showToastAlert(title, text) {
+  const toast = document.getElementById('alarmToast');
+  document.querySelector('.alarm-toast .boss-text').textContent = title;
+  document.getElementById('alarmTaskText').textContent = text;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 8000);
+}
+
+function dismissAlarm() {
+  document.getElementById('alarmToast').classList.remove('show');
+}
+
+// ===== PWA INSTALL =====
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBar();
+});
+
+function showInstallBar() {
+  const wrap = document.getElementById('installBarWrap');
+  wrap.innerHTML = `
+    <div class="install-bar">
+      <div>📲</div>
+      <div class="info">
+        <strong>App হিসেবে Install করুন</strong>
+        <span>Offline কাজ করবে, হোম স্ক্রিনে থাকবে</span>
+      </div>
+      <button class="install-btn" onclick="installApp()">Install</button>
+    </div>`;
+}
+
+async function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('installBarWrap').innerHTML = '';
+  }
+  deferredPrompt = null;
+}
+
+// iOS install hint
+function checkIOSInstall() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  if (isIOS && !isStandalone) {
+    const wrap = document.getElementById('installBarWrap');
+    wrap.innerHTML = `
+      <div class="install-bar">
+        <div>📲</div>
+        <div class="info">
+          <strong>iPhone-এ Install করুন</strong>
+          <span>Safari-এ Share → "Add to Home Screen" চাপুন</span>
+        </div>
+      </div>`;
+  }
+}
+
+// ===== SERVICE WORKER =====
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+const CACHE = 'boss-tasks-v1';
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+  self.skipWaiting();
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => new Response('Offline'))));
+});
+`;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+  }
+}
+
+function setupManifest() {
+  const manifest = {
+    name: 'Boss Task Manager',
+    short_name: 'Boss Tasks',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#07070d',
+    theme_color: '#ff6b35',
+    icons: [{
+      src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="%23ff6b35"/><text y="1em" font-size="140" x="20">📋</text></svg>',
+      sizes: '192x192', type: 'image/svg+xml'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest'; link.href = url;
+  document.head.appendChild(link);
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  setupManifest();
+  registerSW();
+  updateClock();
+  buildDateStrip();
+  renderTasks();
+  checkNotifStatus();
+  checkIOSInstall();
+
+  setInterval(updateClock, 1000);
+  setInterval(checkAlarms, 15000);
+  setInterval(() => { buildDateStrip(); renderTasks(); }, 60000);
+
+  // Request notification on first load
+  if (!localStorage.getItem('boss_notif') && 'Notification' in window) {
+    setTimeout(async () => {
+      const perm = await Notification.requestPermission();
+      notifGranted = perm === 'granted';
+      if (notifGranted) {
+        localStorage.setItem('boss_notif', '1');
+        document.getElementById('notifBtn').classList.add('on');
+      }
+    }, 2000);
+  }
+
+  // Wake lock to keep screen on during tasks
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
